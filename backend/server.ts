@@ -64,11 +64,15 @@ app.post('/api/analyze', async (req: Request<{}, {}, AnalyzeRequestBody>, res: R
             score = 0;
         }
 
-        const insertQuery = `
-            INSERT INTO email_scans (email_text, spam_score, has_personalization, flagged_words)
-            VALUES (?, ?, ?, ?);
-        `;
-        await pool.execute(insertQuery, [text, score, hasPersonalization ? 1 : 0, flagged.join(', ')]);
+        try {
+            const insertQuery = `
+                INSERT INTO email_scans (email_text, spam_score, has_personalization, flagged_words)
+                VALUES (?, ?, ?, ?);
+            `;
+            await pool.execute(insertQuery, [text, score, hasPersonalization ? 1 : 0, flagged.join(', ')]);
+        } catch (dbError) {
+            console.error("Database logging failed:", dbError);
+        }
 
         return res.json({ score, hasPersonalization, flaggedWords: flagged });
     } catch (error) {
