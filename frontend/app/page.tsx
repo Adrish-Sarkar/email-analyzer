@@ -1,12 +1,6 @@
 'use client';
 import { useState } from 'react';
-
-interface AnalysisResults {
-  score: number;
-  hasPersonalization: boolean;
-  flaggedWords: string[];
-  linkCount: number; // Added to match the backend updates
-}
+import type { AnalysisResults } from '../../backend/src/analyze/interfaces/analyze-results.interface';
 
 export default function Home() {
   const [text, setText] = useState('');
@@ -32,9 +26,10 @@ export default function Home() {
 
       const data = await response.json();
       setResults(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error connecting to backend API", err);
-      setError(err.message || "Failed to connect to backend API");
+      const errorMessage = err instanceof Error ? err.message : "Failed to connect to backend API";
+      setError(errorMessage);
       setResults(null);
     } finally {
       setLoading(false);
