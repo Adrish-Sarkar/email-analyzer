@@ -50,6 +50,7 @@ app.post('/api/analyze', async (req: Request<{}, {}, AnalyzeRequestBody>, res: R
         let flagged: string[] = [];
         let score: number = 100;
 
+        // 1. Keyword Scan
         spamKeywords.forEach(word => {
             if (text.toLowerCase().includes(word)) {
                 flagged.push(word);
@@ -57,9 +58,23 @@ app.post('/api/analyze', async (req: Request<{}, {}, AnalyzeRequestBody>, res: R
             }
         });
 
+        // 2. Personalization Check
         const hasPersonalization: boolean = /\{\{.*?\}\}/.test(text);
         if (!hasPersonalization) score -= 10;
 
+        // 3. Hyperlink Overhead Check
+        // Match standard http/https links or common web domain suffixes
+        const urlRegex = /https?:\/\/[^\s]+|www\.[^\s]+\.[^\s]+/gi;
+        const matches = text.match(urlRegex);
+        const linkCount = matches ? matches.length : 0;
+
+        // Cold outreach best practice: 1 link is fine (unsub or portfolio), excess is dangerous
+        if (linkCount > 1) {
+            const excessiveLinksCount = linkCount - 1;
+            score -= (excessiveLinksCount * 15); // Deduct 15 points per extra link
+        }
+
+        // 4. Final Safety Guardrail Constraint
         if (score < 0) {
             score = 0;
         }
@@ -74,7 +89,13 @@ app.post('/api/analyze', async (req: Request<{}, {}, AnalyzeRequestBody>, res: R
             console.error("Database logging failed:", dbError);
         }
 
-        return res.json({ score, hasPersonalization, flaggedWords: flagged });
+        // Return metrics cleanly to the UI layer
+        return res.json({
+            score,
+            hasPersonalization,
+            flaggedWords: flagged,
+            linkCount
+        });
     } catch (error) {
         res.status(500).json({ error: "Internal Server Error" });
     }
