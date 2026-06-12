@@ -24,22 +24,6 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-async function initDB(): Promise<void> {
-    const createTableQuery = `
-        CREATE TABLE IF NOT EXISTS email_scans (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            email_text TEXT NOT NULL,
-            spam_score INT NOT NULL,
-            has_personalization BOOLEAN NOT NULL,
-            flagged_words TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    `;
-    await pool.query(createTableQuery);
-    console.log("MySQL Database Initialized.");
-}
-initDB().catch(err => console.error(err));
-
 // Enforce types on the Request and Response
 app.post('/api/analyze', async (req: Request<{}, {}, AnalyzeRequestBody>, res: Response) => {
     try {
