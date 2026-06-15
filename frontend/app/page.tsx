@@ -9,9 +9,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
-    if (!text.trim()) return;
-    setLoading(true);
+    // Always clear stale state on every attempt
+    setResults(null);
     setError(null);
+
+    if (!text.trim()) return;
+
+    setLoading(true);
     try {
       const response = await fetch('http://localhost:5001/api/analyze', {
         method: 'POST',
@@ -21,16 +25,19 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server returned status ${response.status}`);
+        // NestJS ValidationPipe returns message as a string array — join them
+        const messages = Array.isArray(errorData.message)
+          ? errorData.message.join(' ')
+          : errorData.message || errorData.error || `Server returned status ${response.status}`;
+        throw new Error(messages);
       }
 
       const data = await response.json();
       setResults(data);
     } catch (err: unknown) {
-      console.error("Error connecting to backend API", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to connect to backend API";
+      console.error('Error connecting to backend API', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to backend API';
       setError(errorMessage);
-      setResults(null);
     } finally {
       setLoading(false);
     }
@@ -67,8 +74,8 @@ export default function Home() {
           <div className="mt-8 p-6 bg-slate-100 rounded-md border border-slate-200">
             <h2 className="text-xl font-semibold text-slate-700 mb-4">Diagnostics Result</h2>
 
-            {/* Expanded the grid layout from 2 columns to 3 columns to natively support the link metric */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Deliverability Score */}
               <div className="bg-white p-4 rounded shadow-sm border border-slate-100">
                 <span className="block text-xs text-slate-400 font-bold uppercase">Deliverability Score</span>
                 <span className={`text-3xl font-extrabold ${results.score > 70 ? 'text-green-600' : 'text-red-500'}`}>
@@ -76,6 +83,7 @@ export default function Home() {
                 </span>
               </div>
 
+              {/* Personalization Check */}
               <div className="bg-white p-4 rounded shadow-sm border border-slate-100">
                 <span className="block text-xs text-slate-400 font-bold uppercase">Personalization Check</span>
                 <span className={`text-sm font-bold mt-2 block ${results.hasPersonalization ? 'text-green-600' : 'text-amber-500'}`}>
@@ -83,7 +91,7 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* New Link Tracking Diagnostic Block */}
+              {/* Hyperlinks */}
               <div className="bg-white p-4 rounded shadow-sm border border-slate-100">
                 <span className="block text-xs text-slate-400 font-bold uppercase">Hyperlinks Detected</span>
                 <span className={`text-3xl font-extrabold block ${results.linkCount > 1 ? 'text-red-500' : 'text-green-600'}`}>
@@ -91,6 +99,17 @@ export default function Home() {
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-1">
                   {results.linkCount > 1 ? '⚠️ Risk: Filters penalize > 1 link' : '✓ Safe Link Density'}
+                </span>
+              </div>
+
+              {/* Excessive Caps */}
+              <div className="bg-white p-4 rounded shadow-sm border border-slate-100">
+                <span className="block text-xs text-slate-400 font-bold uppercase">Excessive Caps</span>
+                <span className={`text-sm font-bold mt-2 block ${results.hasExcessiveCaps ? 'text-red-500' : 'text-green-600'}`}>
+                  {results.hasExcessiveCaps ? '⚠️ Excessive Caps Detected' : '✓ Normal Capitalisation'}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  {results.hasExcessiveCaps ? 'High caps ratio triggers spam filters' : 'Caps ratio within acceptable range'}
                 </span>
               </div>
             </div>
@@ -105,4 +124,4 @@ export default function Home() {
       </div>
     </main>
   );
-}
+}

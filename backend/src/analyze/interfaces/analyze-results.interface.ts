@@ -3,4 +3,6 @@ export interface AnalysisResults {
   hasPersonalization: boolean;
   flaggedWords: string[];
   linkCount: number;
+  hasExcessiveCaps: boolean;
 }
+
